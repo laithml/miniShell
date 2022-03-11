@@ -36,7 +36,7 @@ void loop() {
             int charCount = 0, wordCount = 0;
 //            printf("Enter string, or \"exit\" to end program:\n");
             if (getcwd(cwd, sizeof(cwd)) != NULL) {
-                printf("%s>", cwd);
+                printf("%s>\n", cwd);
 
                 fgets(str, 510, stdin);
                 str[strlen(str) -
@@ -62,11 +62,18 @@ void loop() {
                             i++;
                             char *arrayOfWords[wordCount + 1];
                             splitToArray(arrayOfWords, str, wordCount);
-                            
 
-
-
-
+                            printf("\n");
+                            pid_t x=fork();
+                            if(x==0){
+                             if(execvp(arrayOfWords[0], arrayOfWords))
+                                exit(1);
+                            }
+                            if(x>0) {
+                                wait(NULL);
+                                for (int j = 0; j < wordCount; j++)
+                                    free(arrayOfWords[j]);
+                            }
                         }
                     }
                 }
@@ -175,7 +182,5 @@ void splitToArray(char *splitArray[], char Str[], int N) {
 
         i++;
     }
-    splitArray[j] = (char *) malloc(sizeof(char) * 5);
-    strcpy(splitArray[j], "NULL");
-
+    splitArray[j]=NULL;
 }
