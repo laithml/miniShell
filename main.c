@@ -24,13 +24,15 @@ int main() {
 
 
 void loop() {
-    char str[512];//I added 2 to the length because there's '\n\0' at the end of the str
+    //I added 2 to the length because there's '\n\0' at the end of the str
+    char str[512];
     char cwd[PATH_MAX];
+    int cmdCount=0,TotalWord=0;
     FILE *writeFile;
     writeFile = fopen("file.txt", "a");
     if (writeFile == NULL) {
         perror("cant create a new file");
-        return;
+        exit(1);
     } else {
         int i = countLine();
         while (-1) {
@@ -40,30 +42,46 @@ void loop() {
                 printf("%s>", cwd);
 
                 fgets(str, 510, stdin);
-                str[strlen(str) -
-                    1] = '\0';    //because the user press enter so '\n' enter to the input string in the last index, so we put '\0'
+                //because the user press enter so '\n' enter to the input string in the last index, so we put '\0'
+                str[strlen(str) -1] = '\0';
                 if (strcmp(str, "exit") == 0) break;
                 else if (strcmp(str, "history") == 0) {
-                    fclose(writeFile);//close the file to save every input before "history" to the file, to can read it in the history function
+                    //close the file to save every input before "history" to the file, to can read it in the history function
+                    fprintf(writeFile, "%d: %s\n", i, str);
+                    i++;
+                    fclose(writeFile);
                     history();
-                    writeFile = fopen("file.txt", "a");//open the file again to continue to append new input in it
+                    //open the file again to continue to append new input in it
+                    writeFile = fopen("file.txt", "a");
                 } else {
                     const char *word = count(str, &charCount, &wordCount);
                     if (wordCount != 0) {
-                        if (wordCount == 1 && strcmp(word, "exit") ==
-                                              0) // if their only one word, so I have to check if it "exit" or "history"
+                        // if their only one word, so I have to check if it "exit" or "history"
+                        if (wordCount == 1 && strcmp(word, "exit") ==0)
                             break;
                         else if (wordCount == 1 && strcmp(word, "history") == 0) {
+                            fprintf(writeFile, "%d: %s\n", i, str);
+                            i++;
                             fclose(writeFile);
                             history();
                             writeFile = fopen("file.txt", "a");
-                        } else {
+                        }
+                        else if(wordCount == 1 && strcmp(word, "done") ==0){
+                            printf("Num of commands: %d\n",(cmdCount+1));
+                            printf("Total number of words in all commands: %d !",(TotalWord));
+                            break;
+                        }
+                        else {
 //                        printf("%d words\n%d chars\n", wordCount, charCount);
                             fprintf(writeFile, "%d: %s\n", i, str);
                             i++;
                             char *arrayOfWords[wordCount + 1];
                             splitToArray(arrayOfWords, str, wordCount);
                             pid_t x=fork();
+                            if(x<0){
+                                perror("Fork unsuccessfully");
+                                exit(1);
+                            }
                             if(x==0){
                                 if(-1==execvp(arrayOfWords[0],arrayOfWords))
                                     printf("This command Not Supported Yet (%s)\n",arrayOfWords[0]);
@@ -71,11 +89,9 @@ void loop() {
                                     free(arrayOfWords[j]);
                                 exit(1);
                             }
-
                                 wait(NULL);
-
-
-
+                            cmdCount++;
+                            TotalWord+=wordCount;
 
                         }
 
@@ -99,6 +115,7 @@ void history() {
     readFile = fopen("file.txt", "r");
     if (readFile == NULL) {
         perror("file doesn't exist");
+        exit(1);
     } else {
         char c = fgetc(readFile);//read character by character and print it to the
         while (c != EOF) {
@@ -116,6 +133,7 @@ int countLine() {
     readFile = fopen("file.txt", "r");
     if (readFile == NULL) {
         perror("file doesn't exist");
+        exit(1);
     } else {
         char c = fgetc(readFile);
         while (c != EOF) {
@@ -157,7 +175,8 @@ const char *count(char str[], int *charCount, int *wordCount) {
     if (strcmp(word, "history") == 0 &&
         (*charCount) == 7)// if the first word in the input is "history" return  "history"
         return "history";
-
+    if (strcmp(word, "done") == 0 )
+        return "done";
     return "";
 }
 
@@ -170,7 +189,10 @@ void splitToArray(char *splitArray[], char Str[], int N) {
             int length = (end - start + 1);
             splitArray[j] = (char *) malloc(sizeof(char) * length);
             if (splitArray[j] == NULL) {
+                for (int k = 0; k < N; ++k)
+                    free(splitArray[k]);
                 perror("error can't allocate space in memory");
+                exit(1);
             } else {
                 strncpy(splitArray[j], &Str[start], length);
                 j++;
