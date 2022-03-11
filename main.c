@@ -1,8 +1,9 @@
 #include <stdio.h>
-#include <sys/syslimits.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
+#include <linux/limits.h>
+#include <sys/wait.h>
 
 void splitToArray(char *splitArray[], char Str[], int N);
 
@@ -36,7 +37,7 @@ void loop() {
             int charCount = 0, wordCount = 0;
 //            printf("Enter string, or \"exit\" to end program:\n");
             if (getcwd(cwd, sizeof(cwd)) != NULL) {
-                printf("%s>\n", cwd);
+                printf("%s>", cwd);
 
                 fgets(str, 510, stdin);
                 str[strlen(str) -
@@ -62,25 +63,32 @@ void loop() {
                             i++;
                             char *arrayOfWords[wordCount + 1];
                             splitToArray(arrayOfWords, str, wordCount);
-
-                            printf("\n");
                             pid_t x=fork();
                             if(x==0){
-                             if(execvp(arrayOfWords[0], arrayOfWords))
-                                exit(1);
-                            }
-                            if(x>0) {
-                                wait(NULL);
+                                if(-1==execvp(arrayOfWords[0],arrayOfWords))
+                                    printf("This command Not Supported Yet (%s)\n",arrayOfWords[0]);
                                 for (int j = 0; j < wordCount; j++)
                                     free(arrayOfWords[j]);
+                                exit(1);
                             }
+
+                                wait(NULL);
+
+
+
+
                         }
+
                     }
+
                 }
+
             }
+
         }
 
         fclose(writeFile);
+
         return;
 
     }
@@ -156,21 +164,16 @@ const char *count(char str[], int *charCount, int *wordCount) {
 
 void splitToArray(char *splitArray[], char Str[], int N) {
     int i = 0, start = 0, end = 0, j = 0;
-    char *word;
+
     while (i < strlen(Str) + 1) {
         if (end != 0) {
             int length = (end - start + 1);
-            word = (char *) malloc(sizeof(char) * length);
-            if (word == NULL) {
+            splitArray[j] = (char *) malloc(sizeof(char) * length);
+            if (splitArray[j] == NULL) {
                 perror("error can't allocate space in memory");
             } else {
-                strncpy(word, &Str[start], length);
-                splitArray[j] = (char *) malloc(sizeof(char) * length);
-                strcpy((splitArray[j]), word);
+                strncpy(splitArray[j], &Str[start], length);
                 j++;
-
-                free(word);
-
             }
             end = 0;
         }
@@ -183,4 +186,5 @@ void splitToArray(char *splitArray[], char Str[], int N) {
         i++;
     }
     splitArray[j]=NULL;
+
 }
