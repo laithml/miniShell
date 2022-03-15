@@ -12,7 +12,7 @@ void history();
 const char *count(char[], int *, int *);
 
 int countLine();
-
+void cmdHistory(int,int);
 void loop();
 
 int main() {
@@ -43,6 +43,13 @@ void loop() {
                 //because the user press enter so '\n' enter to the input string in the last index, so we put '\0'
                 str[strlen(str) - 1] = '\0';
                 if (strcmp(str, "exit") == 0) break;
+                else if (str[0]=='!'){
+                    fclose(writeFile);
+                    int lineNum= atoi(&str[1]);
+                    int len= strlen(str);
+                    cmdHistory(lineNum,len);
+                    writeFile = fopen("file.txt", "a");
+                }
                 else if(str[0]==' ' ||str[strlen(str)-1]==' ')
                     printf("You have entered space/s before/after the command \n");
                 else if (strcmp(str, "history") == 0) {
@@ -119,6 +126,50 @@ void loop() {
 
     }
 }
+
+void cmdHistory(int cmdLine,int len) {
+    FILE *readFile;
+    readFile = fopen("file.txt", "r");
+    if (readFile == NULL) {
+        perror("file doesn't exist");
+        exit(1);
+    } else {
+        int i = 0;
+        char cmdStr[512];
+        while (i <= cmdLine) {
+            fgets(cmdStr, 512, readFile);
+            i++;
+        }
+        cmdStr[strlen(cmdStr) - 1] = '\0';
+        strcpy(cmdStr, &cmdStr[len + 1]);
+        int wordCount = 0, charCount = 0;
+        const char *word = count(cmdStr, &charCount, &wordCount);
+        char *cmdArray[wordCount + 1];
+        splitToArray(cmdArray, cmdStr, wordCount);
+        if (wordCount == 1 && strcmp(word, "history") == 0) {
+            fclose(readFile);
+            history();
+        } else {
+            pid_t x = fork();
+            if (x < 0) {
+                perror("Fork unsuccessfully");
+                exit(1);
+            }
+            if (x == 0) {
+                if (-1 == execvp(cmdArray[0], cmdArray)) {
+                    printf("This command Not Supported Yet (%s)\n", cmdArray[0]);
+                }
+                for (int j = 0; j < wordCount; j++)
+                    free(cmdArray[j]);
+                exit(0);
+            }
+            wait(NULL);
+            fclose(readFile);
+        }
+    }
+
+}
+
 
 void history() {
     FILE *readFile;
