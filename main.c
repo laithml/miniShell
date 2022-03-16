@@ -95,7 +95,7 @@ int countLine() {
     FILE *readFile;
     readFile = fopen("file.txt", "r");
     if (readFile == NULL) {
-        perror("file doesn't exist");
+        fprintf(stderr,"file doesn't exist");
         exit(1);
     } else {
         char c = (char)fgetc(readFile);
@@ -113,7 +113,7 @@ void history() {
     FILE *readFile;
     readFile = fopen("file.txt", "r");
     if (readFile == NULL) {
-        perror("file doesn't exist");
+        fprintf(stderr,"file doesn't exist");
         exit(1);
     } else {
         char c =(char) fgetc(readFile);//read character by character and print it to the
@@ -135,7 +135,7 @@ void readFromFile(int line){
     FILE* read;
     read= fopen("file.txt","r");
     if(read==NULL){
-        perror("can't open file");
+        fprintf(stderr,"can't open file");
         exit(1);
     } else{
         char cmd[514];
@@ -187,7 +187,7 @@ void writeToFile(char *str){
     FILE* write;
     write= fopen("file.txt","a");
     if(write==NULL){
-        perror("can't create/open file");
+        fprintf(stderr,"can't create/open file");
         exit(1);
     }
     else{
