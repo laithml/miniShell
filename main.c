@@ -3,7 +3,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <sys/wait.h>
-#include <sys/syslimits.h>
+#include <linux/limits.h>
+
 
 void splitToArray(char*[], char[]);
 
@@ -26,7 +27,7 @@ int main() {
 
 void loop() {
     //I added 2 to the length because there's '\n\0' at the end of the str
-    char str[512];
+    char str[514];
     char cwd[PATH_MAX];
     int cmdCount = 0, TotalWord = 0;
         while (-1) {
@@ -37,8 +38,8 @@ void loop() {
                 //because the user press enter so '\n' enter to the input string in the last index, so we put '\0'
                 str[strlen(str) - 1] = '\0';
                 if (str[0] == ' ' || str[strlen(str) - 1] == ' ')
-                    printf("You have entered space/s before/after the command \n");
-                else if (str[0] == '!') {
+                    fprintf(stderr,"You have entered space/s before/after the command \n");
+                else if (str[0] == '!'&&str[1]!=' ') {
                     int k = 1;
                     int check = 0;
                     while (k < strlen(str) - 1) {
@@ -57,6 +58,7 @@ void loop() {
                     const char *word = count(str, &charCount, &wordCount);
                     if (wordCount != 0) {
                         if(strcmp(word, "history") == 0){
+                            writeToFile(str);
                             history();
                             cmdCount++;
                             TotalWord ++;
@@ -114,7 +116,7 @@ void history() {
 }
 void readFromFile(int line){
     int numberOfLines=countLine();
-    if(line>numberOfLines||line<0){
+    if(line>numberOfLines||line<1){
         printf("the line number doesn't exist\n");
         return;
     }
@@ -126,15 +128,17 @@ void readFromFile(int line){
     } else{
         char cmd[512];
         int i=0;
-        while(i<=line){
+        while(i<line){
             fgets(cmd,512,read);
             i++;
         }
         cmd[strlen(cmd)-1]='\0';
         int WC=0,CC=0;
+        writeToFile(cmd);
         count(cmd,&CC,&WC);
         exHistory(WC,cmd);
     }
+    fclose(read);
 }
 void exHistory(int WC,char* str){
     char *arrayOfWords[WC + 1];
