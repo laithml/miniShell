@@ -34,14 +34,17 @@ void loop() {
             int charCount = 0, wordCount = 0;
             if (getcwd(cwd, sizeof(cwd)) != NULL) {
                 printf("%s>", cwd);
-                fgets(str, 510, stdin);
+                fgets(str, 514, stdin);
                 //because the user press enter so '\n' enter to the input string in the last index, so we put '\0'
                 str[strlen(str) - 1] = '\0';
+                //check if there's space after or before the command
                 if (str[0] == ' ' || str[strlen(str) - 1] == ' ')
                     fprintf(stderr,"You have entered space/s before/after the command \n");
+               //check if this command to bring the history
                 else if (str[0] == '!'&&str[1]!=' ') {
                     int k = 1;
                     int check = 0;
+                    //check is like boolean to check if there's no anything other numbers after '!'
                     while (k < strlen(str) - 1) {
                         if (str[k] <= '0' || str[k] >= '9')
                             check = 1;
@@ -50,28 +53,34 @@ void loop() {
                     if (check == 1)
                         printf("enter only numbers after '!'\n");
                     else {
+                        //change the number after '!' to int
                     int line = atoi(&str[1]);
                     readFromFile(line);
                 }
             }
                 else {
+                    //count method return an "cd", "done" or ""
                     const char *word = count(str, &charCount, &wordCount);
                     if (wordCount != 0) {
+                        //if it's history, so we don't need to fork and execvp because cd not supported yet
                         if(strcmp(word, "history") == 0){
+                            //writeToFile method to save the string to history file
                             writeToFile(str);
                             history();
                             cmdCount++;
                             TotalWord ++;
                         }
+                            //if it's cd, so we don't need to fork and execvp because cd not supported yet
                         else if (strcmp(word, "cd") == 0) {
                             printf("command not supported (Yet)\n");
                             cmdCount++;
                             TotalWord += wordCount;
                         } else if (wordCount == 1 && strcmp(word, "done") == 0) {
                             printf("Num of commands: %d\n", (cmdCount + 1));
-                            printf("Total number of words in all commands: %d !", TotalWord);
+                            printf("Total number of words in all commands: %d !\n", TotalWord);
                             break;
-                        } else{
+                        } // else if it "done" print the total of commands and the words at the commands and stop the shell
+                        else{
                             writeToFile(str);
                             ex(wordCount, str, &TotalWord, &cmdCount);
                         }
@@ -100,6 +109,7 @@ int countLine() {
     return counter;
 }
 void history() {
+    //print file history to the screen character by character
     FILE *readFile;
     readFile = fopen("file.txt", "r");
     if (readFile == NULL) {
@@ -114,8 +124,10 @@ void history() {
         fclose(readFile);
     }
 }
+
 void readFromFile(int line){
     int numberOfLines=countLine();
+    //check if the line that the user enter is exist in the history file
     if(line>numberOfLines||line<1){
         printf("the line number doesn't exist\n");
         return;
@@ -126,20 +138,26 @@ void readFromFile(int line){
         perror("can't open file");
         exit(1);
     } else{
-        char cmd[512];
+        char cmd[514];
         int i=0;
+        //override line to reach the goal line
         while(i<line){
-            fgets(cmd,512,read);
+            fgets(cmd,514,read);
             i++;
         }
         cmd[strlen(cmd)-1]='\0';
         int WC=0,CC=0;
+        //add the command that want to execute to the history file
         writeToFile(cmd);
+        //same thing that we do at the normal execute
+        //but this time we don't need to check what count return because "cd" and "done" doesn't enter to the file
         count(cmd,&CC,&WC);
         exHistory(WC,cmd);
     }
     fclose(read);
 }
+
+//like ex method
 void exHistory(int WC,char* str){
     char *arrayOfWords[WC + 1];
     splitToArray(arrayOfWords, str);
@@ -163,6 +181,8 @@ void exHistory(int WC,char* str){
         wait(NULL);
     }
 }
+
+//input str print it at the history file
 void writeToFile(char *str){
     FILE* write;
     write= fopen("file.txt","a");
@@ -206,58 +226,75 @@ const char *count(char str[], int *charCount, int *wordCount) {
     return "";
 }
 
-void ex(int WC, char *str, int *Total, int *Cmd) {
+/*
+ * this method execute the command using fork and execvp
+ */
+void ex(int WC, char *str, int *Total, int *cmds) {
     char *arrayOfWords[WC + 1];
     splitToArray(arrayOfWords, str);
+    //create a new process to run the command
     pid_t x = fork();
+    //if there's problem to create a new process
     if (x < 0) {
         perror("Fork unsuccessfully");
-        for (int j = 0; j < WC; j++)
-            free(arrayOfWords[j]);
         exit(1);
     }
+    /*
+     * if this the new process (child)
+     * run the command using execvp method
+     */
     if (x == 0) {
-        if (-1 == execvp(arrayOfWords[0], arrayOfWords)){
+        //check if the execvp doesn't work probably
+        if (-1 == execvp(arrayOfWords[0], arrayOfWords))
             perror("command not supported (Yet)");
-            exit(1);
-        }
 
         exit(0);
     } else {
+        //wait for the child to end the process
+        wait(NULL);
+        //after the finishing of execvp (child) we don't want the array of stings anymore, so we have to free it from the memory
         for (int j = 0; j < WC; j++)
             free(arrayOfWords[j]);
-        wait(NULL);
-        (*Cmd)++;
+        //increase the command and sum the words at it
+        (*cmds)++;
         (*Total) += WC;
-
     }
 }
-
+/*
+ * split the string to an array and the last element is NULL, so the command will be ready to execvp method after this method
+ */
 void splitToArray(char *splitArray[], char Str[]) {
     int i = 0, start = 0, end = 0, j = 0;
 
     while (i < strlen(Str) + 1) {
+        //if the end changed so we arrived to the last char at the word
         if (end != 0) {
+            // +1 for the '\0'
             int length = (end - start + 1);
+            //every element in the array we need to allocate it exactly  to size of the word
             splitArray[j] = (char *) calloc(length , sizeof(char) );
+            //if we cannot allocate the memory, so we have to free every thing we allocate it and exit from the program
             if (splitArray[j] == NULL) {
                 for (int k = 0; k < j; ++k)
                     free(splitArray[k]);
                 perror("error can't allocate space in memory");
                 exit(1);
             } else {
+                //copy the word to the element into the array
                 strncpy(splitArray[j], &Str[start], length);
                 j++;
             }
             end = 0;
         }
-
+        //check if it's the first char at the word
         if (i > 0 && Str[i] != ' ' && Str[i - 1] == ' ')
             start = i;
+        //check if it's the last char at the word
         if (Str[i] != ' ' && (Str[i + 1] == ' ' || Str[i + 1] == '\0'))
             end = i;
 
         i++;
     }
+    //add the last element NULL for execvp method
     splitArray[j] = NULL;
 }
