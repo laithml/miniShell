@@ -119,7 +119,7 @@ void ex(int WC, char *str, int *Total, int *cmds) {
     }
 }
 /*
- * split the string to an array and the last element is NULL, so the command will be ready to execvp method after this method
+ * split the string to an array and the last element is NULL, so the command will be ready to execvp method after this metho
  */
 void splitToArray(char *splitArray[], char Str[]) {
     int i = 0, start = 0, end = 0, j = 0;
