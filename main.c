@@ -10,12 +10,10 @@ void splitToArray(char*[], char[]);
 
 const char *count(char[], int *, int *);
 
-void exHistory(int,char*);
-
 void history();
 void loop();
 
-void readFromFile(int);
+void readFromFile(int,int*,int*);
 
 void writeToFile(char*);
 
@@ -55,7 +53,7 @@ void loop() {
                     else {
                         //change the number after '!' to int
                     int line = atoi(&str[1]);
-                    readFromFile(line);
+                    readFromFile(line,&TotalWord,&cmdCount);
                 }
             }
                 else {
@@ -125,7 +123,7 @@ void history() {
     }
 }
 
-void readFromFile(int line){
+void readFromFile(int line,int *TotalWord,int  *cmdCount){
     int numberOfLines=countLine();
     //check if the line that the user enter is exist in the history file
     if(line>numberOfLines||line<1){
@@ -151,36 +149,20 @@ void readFromFile(int line){
         writeToFile(cmd);
         //same thing that we do at the normal execute
         //but this time we don't need to check what count return because "cd" and "done" doesn't enter to the file
-        count(cmd,&CC,&WC);
-        exHistory(WC,cmd);
+       const char * word = count(cmd,&CC,&WC);
+        printf("The command that entered from history is: %s\n",cmd);
+        if(strcmp(word, "history") == 0){
+            //writeToFile method to save the string to history file
+            writeToFile(cmd);
+            history();
+            (*cmdCount)++;
+            (*TotalWord) ++;
+        }else
+        ex(WC,cmd,TotalWord,cmdCount);
     }
     fclose(read);
 }
 
-//like ex method
-void exHistory(int WC,char* str){
-    char *arrayOfWords[WC + 1];
-    splitToArray(arrayOfWords, str);
-    pid_t x = fork();
-    if (x < 0) {
-        perror("Fork unsuccessfully");
-        for (int j = 0; j < WC; j++)
-            free(arrayOfWords[j]);
-        exit(1);
-    }
-    if (x == 0) {
-        if (-1 == execvp(arrayOfWords[0], arrayOfWords)){
-            perror("command not supported (Yet)");
-            exit(1);
-        }
-
-        exit(0);
-    } else {
-        for (int j = 0; j < WC; j++)
-            free(arrayOfWords[j]);
-        wait(NULL);
-    }
-}
 
 //input str print it at the history file
 void writeToFile(char *str){
